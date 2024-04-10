@@ -5,6 +5,8 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Security.Permissions;
+using Microsoft.Win32;
 
 namespace WinDynamicDesktop
 {
@@ -88,6 +90,21 @@ namespace WinDynamicDesktop
         {
             var profileSettings = Windows.System.UserProfile.UserProfilePersonalizationSettings.Current;
             await profileSettings.TrySetLockScreenImageAsync(await LoadImageFile(imagePath));
+
+            // get the key where the values reside
+            RegistryKey key = Registry.LocalMachine.OpenSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PersonalizationCSP", true);
+            if (key == null)
+            {
+                // the key doesn't exist; create it
+                key = Registry.LocalMachine.CreateSubKey("SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\PersonalizationCSP");
+            }
+
+            // add/update the values
+            key.SetValue("LockScreenImagePath", imagePath, RegistryValueKind.String);
+            key.SetValue("LockScreenImageUrl", imagePath, RegistryValueKind.String);
+
+            // close the key to write changes
+            key.Close();
         }
 
         private static Task<Windows.Storage.StorageFile> LoadImageFile(string imagePath)
